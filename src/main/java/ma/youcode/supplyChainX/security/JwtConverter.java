@@ -1,6 +1,5 @@
 package ma.youcode.supplyChainX.security;
 
-import io.micrometer.common.lang.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -12,29 +11,27 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Component
 public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
-    private final JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter =
-            new JwtGrantedAuthoritiesConverter();
+    private final JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
 
-    @Value("${jwt.auth.converter.principle-attribute}")
+    @Value("${jwt.auth.converter.principle-attribute:sub}")
     private String principleAttribute;
+
     @Value("${jwt.auth.converter.resource-id}")
     private String resourceId;
 
     @Override
-    public AbstractAuthenticationToken convert(@NonNull Jwt jwt) {
+    public AbstractAuthenticationToken convert(Jwt jwt) {
 
         Collection<GrantedAuthority> authorities = Stream.concat(
                 jwtGrantedAuthoritiesConverter.convert(jwt).stream(),
-                extractResourceRoles(jwt).stream()
+                extractRoles(jwt).stream()
         ).collect(Collectors.toSet());
 
         return new JwtAuthenticationToken(
@@ -45,32 +42,29 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
     }
 
     private String getPrincipleClaimName(Jwt jwt) {
-        String claimName = JwtClaimNames.SUB;
-        if (principleAttribute != null) {
-            claimName = principleAttribute;
-        }
-        return jwt.getClaim(claimName);
+        return jwt.getClaim(principleAttribute);
     }
 
-    private Collection<? extends GrantedAuthority> extractResourceRoles(Jwt jwt) {
-        Map<String, Object> resourceAccess;
-        Map<String, Object> resource;
-        Collection<String> resourceRoles;
-        if (jwt.getClaim("resource_access") == null) {
-            return Set.of();
+    private Collection<? extends GrantedAuthority> extractRoles(Jwt jwt) {
+        Set<GrantedAuthority> roles = new HashSet<>();
+
+        Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+        if (realmAccess != null && realmAccess.get("roles") != null) {
+            Collection<String> realmRoles = (Collection<String>) realmAccess.get("roles");
+            roles.addAll(realmRoles.stream()
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .collect(Collectors.toSet()));
         }
-        resourceAccess = jwt.getClaim("resource_access");
 
-        if (resourceAccess.get(resourceId) == null) {
-            return Set.of();
+        Map<String, Object> resourceAccess = jwt.getClaim("resource_access");
+        if (resourceAccess != null && resourceAccess.get(resourceId) != null) {
+            Map<String, Object> resource = (Map<String, Object>) resourceAccess.get(resourceId);
+            Collection<String> resourceRoles = (Collection<String>) resource.get("roles");
+            roles.addAll(resourceRoles.stream()
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .collect(Collectors.toSet()));
         }
-        resource = (Map<String, Object>) resourceAccess.get(resourceId);
 
-        resourceRoles = (Collection<String>) resource.get("roles");
-
-        return resourceRoles
-                .stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                .collect(Collectors.toSet());
+        return roles;
     }
 }

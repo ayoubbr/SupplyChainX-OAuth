@@ -34,7 +34,7 @@ services:
     container_name: keycloak_supplychainx
     image: quay.io/keycloak/keycloak:25.0.5
     ports:
-      - "9090:8081"
+      - "9090:8080"
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: password

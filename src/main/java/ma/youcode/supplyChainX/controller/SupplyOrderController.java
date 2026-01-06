@@ -4,6 +4,7 @@ import ma.youcode.supplyChainX.dto.SupplyOrderRequest;
 import ma.youcode.supplyChainX.dto.SupplyOrderResponse;
 import ma.youcode.supplyChainX.model.SupplyOrder;
 import ma.youcode.supplyChainX.service.SupplyOrderService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,18 +20,21 @@ public class SupplyOrderController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('RESPONSABLE_ACHATS')")
     public SupplyOrderResponse create(@RequestBody SupplyOrderRequest supplyOrderRequest) {
         SupplyOrder savedOrder = supplyOrderService.save(supplyOrderRequest);
         return supplyOrderService.toResponse(savedOrder);
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('SUPERVISEUR_LOGISTIQUE')")
     public List<SupplyOrderResponse> getAll() {
         List<SupplyOrder> orders = supplyOrderService.findAll();
         return supplyOrderService.toResponseList(orders);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('RESPONSABLE_ACHATS')")
     public SupplyOrderResponse getById(@PathVariable Long id) {
         SupplyOrder order = supplyOrderService.findById(id);
         return supplyOrderService.toResponse(order);
@@ -43,11 +47,13 @@ public class SupplyOrderController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('RESPONSABLE_ACHATS')")
     public int delete(@PathVariable Long id) {
         return supplyOrderService.deleteById(id);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('RESPONSABLE_ACHATS')")
     public SupplyOrderResponse update(@PathVariable Long id, @RequestBody SupplyOrderRequest supplyOrderRequest) {
         SupplyOrder updatedOrder = supplyOrderService.update(supplyOrderRequest, id);
         return supplyOrderService.toResponse(updatedOrder);
