@@ -28,7 +28,7 @@ public class UserController {
             @PathVariable Long id,
             @RequestParam Role newRole
     ) {
-        return ResponseEntity.ok(userService.updateUserRole(id, newRole));
+        return ResponseEntity.ok(userService    .updateUserRole(id, newRole));
     }
 
     @GetMapping("/test")
